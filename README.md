@@ -1,9 +1,9 @@
 # roadtraffic
 
-[![image](https://img.shields.io/pypi/v/roadtraffic.svg)](https://pypi.org/project/roadtraffic/)
-[![image](https://img.shields.io/pypi/l/roadtraffic.svg)](https://pypi.org/project/roadtraffic/)
-[![image](https://img.shields.io/pypi/pyversions/roadtraffic.svg)](https://pypi.org/project/roadtraffic/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/roadtraffic.svg?maxAge=21600)](https://pypistats.org/packages/roadtraffic)
+![PyPI](https://img.shields.io/pypi/v/roadtraffic)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/roadtraffic)
+![PyPI - Format](https://img.shields.io/pypi/format/roadtraffic)
+
 
 ## Overview
 
