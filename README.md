@@ -13,8 +13,6 @@ Currently only data from Finnish roads, collected through this package is suppor
 
 The package works with the raw data. The data could be aggregated across time and road direction/lane. The agreggated data is then bagged for the computational efficiency. The estimation of the fundamental diagram is done on the bagged data. Raw data availability depends on traffic measurement station. The earliest data comes from year 1995. New data becomes available every day at 3 am (Helsinki Time zone). Developers of the package are not affiliated with Fintraffic and can't influence neither the availability of data nor its quality.
 
-This package is a part of my PhD journey - you can follow it on my [personal website](https://iaroslavkriuchkov.com).
-
 ## NOTE
 
 The package is in the initial development stage, and it will be upgraded as my research journey progresses. Feedback, suggestion and comments are highly appreciated as well as the bug reports! For now, you can send me an [e-mail](mailto:iaroslav.kriuchkov@aalto.fi). The contribution will be set up later. 
