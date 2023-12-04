@@ -2,7 +2,7 @@
 import datetime
 
 
-def date_to_day(date: datetime.date) -> int:
+def date_to_day(date: datetime.date) -> tuple:
     """
     Changes a date to the day serial number within the year.
 
@@ -17,7 +17,7 @@ def date_to_day(date: datetime.date) -> int:
         A day serial number for the given date
     """
     day = abs(date - datetime.date(date.year, 1, 1)).days + 1
-    return day
+    return int(date.year), day
 
 
 def day_to_date(year: int, day: int) -> datetime.date:
@@ -34,7 +34,7 @@ def day_to_date(year: int, day: int) -> datetime.date:
     Returns
     -------
     datetime.date
-        A date for the given `day`of the `year`
+        A date for the given `day` of the `year`
     """
     date = datetime.date(year, 1, 1) + datetime.timedelta(days=day - 1)
     return date

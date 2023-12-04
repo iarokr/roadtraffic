@@ -1,0 +1,86 @@
+[project]
+name = "roadtraffic"
+version = "1.0.0-rc.1"
+description = "A package for road traffic data analysis"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {file = "LICENSE", name = "GPLv3"}
+keywords = ["road traffic", "data analysis", "convex regression", "quantile regression"]
+authors = [
+    {name = "Iaroslav Kriuchkov", email = "iaroslav.kriuchkov@aalto.fi"},
+    {name = "Timo Kuosmanen"}
+    ]
+maintainers = [
+    {name = "Iaroslav Kriuchkov", email = "iaroslav.kriuchkov@aalto.fi"}
+    ]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "numpy >= 1.26",
+    "pandas >= 2.0",
+    "tqdm >= 4.66",
+    "scipy >= 1.11",
+    "pystoned >= 0.6.6",
+    "requests >= 2.31",
+    "urllib3 == 1.26.6",
+    "pandas-stubs >= 2.1.1"
+]
+
+[project.optional-dependencies]
+test = [
+    "flake8>=6.1.0",
+    "tox>=4.11.0",
+    "pytest>=7.4.0",
+    "pytest-cov>=4.0.0",
+    "mypy>=1.7.0"
+]
+
+[project.urls]
+repository = "https://github.com/iarokr/roadtraffic"
+changelog = "https://github.com/iarokr/roadtraffic/blob/main/CHANGELOG.md"
+
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["roadtraffic", "roadtraffic.*"]
+#packages = ["roadtraffic", "roadtraffic.utils", ]
+
+[tool.setuptools.package-data]
+"roadtraffic" = ["py.typed"]
+
+[tool.pytest.ini_options]
+addopts = ["--cov=roadtraffic", "--import-mode=importlib"]
+testpaths = [
+    "tests",
+]
+
+[tool.mypy]
+mypy_path = "src"
+check_untyped_defs = true
+disallow_any_generics = true
+ignore_missing_imports = true
+no_implicit_optional = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+no_implicit_reexport = true
