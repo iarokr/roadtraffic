@@ -15,7 +15,7 @@ All notable changes to the `roadtraffic` project will be documented in this file
 
 ### Changed
 - Classes of data are introduced:
-  - Raw data, which contains information on indidual vehciles
+  - Raw data, which contains information on individual vehicles
   - Aggregated data, which contains information on time and/or lane aggregated traffic
   - Bagged data, which contains information on the bagged data
 
