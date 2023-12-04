@@ -1,132 +1,66 @@
-# import dependencies
-
 import pandas as pd
 import numpy as np
-import time
-import scipy
 from typing import Sequence
+import scipy
+import time
 
-from . import constant
+from .constants import DEF_AGG_TIME_PER
 
 
-def aggregate_road(
+def aggregate(
     data: pd.DataFrame,
-    direction: int,
-    aggregation_time_period: int = constant.DEF_AGG_TIME_PER,
+    by_lane: bool = False,
+    aggregation_time_period: int = DEF_AGG_TIME_PER,
+    aggregation_time_period_unit: str = "min",
 ) -> pd.DataFrame:
-    """
-    Function, that aggregates the collected data and calculates space-mean speed, \
-    flow and density. Space-mean speed is calculated as harmonic average of speeds.
-
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Collected data
-    direction : int
-        Direction of the road in interest, usually 1 or 2. Check the description of \
-        Traffic Measurement Station
-    aggregation_time_period : int, optional
-        Aggregation time period in minutes, by default constant.DEF_AGG_TIME_PER
-
-    Returns
-    -------
-    pd.DataFrame
-        Aggregated data set
-    """
+    assert aggregation_time_period_unit in ["min", "sec"], "[LOG]: AssertionError: Wrong aggregation time period unit." # noqa E501
     start_time = time.perf_counter()
 
-    # Initialize resulting DataFrame
-    agg_data = pd.DataFrame()
-
-    # Copy initial data set to calculate aggregation periods for a slected direction
-    df = data[data["direction"] == direction]
-    df["aggregation"] = (df["hour"] * 60 + df["minute"]) / aggregation_time_period
+    # Copy initial data set to calculate aggregation periods for a selected direction
+    df = data.copy(deep=True)
+    if aggregation_time_period_unit == "min":
+        df["aggregation"] = (df["hour"] * 60 + df["minute"]) / aggregation_time_period
+    if aggregation_time_period_unit == "sec":
+        df["aggregation"] = (
+            df["hour"] * 60 * 60 + df["minute"] * 60 + df["second"]
+        ) / aggregation_time_period
     df = df.astype({"aggregation": int})
 
     # Aggregate flow and speed by time
-    agg_data = df.groupby(
-        ["id", "date", "aggregation", "direction"], as_index=False
-    ).agg(
-        smspeed=("speed", scipy.stats.hmean),
-        minute_flow=("cars", "count"),
-        minute_cars=("cars", "sum"),
-        minute_buses=("buses", "sum"),
-        minute_trucks=("trucks", "sum"),
-    )
+    if by_lane:
+        agg_data = df.groupby(
+            ["id", "date", "aggregation", "direction", "lane"], as_index=False
+        ).agg(
+            period_speed=("speed", scipy.stats.hmean),
+            period_flow=("cars", "count"),
+            period_cars=("cars", "sum"),
+            period_buses=("buses", "sum"),
+            period_trucks=("trucks", "sum"),
+        )
+    else:
+        agg_data = df.groupby(
+            ["id", "date", "aggregation", "direction"], as_index=False
+        ).agg(
+            period_speed=("speed", scipy.stats.hmean),
+            period_flow=("cars", "count"),
+            period_cars=("cars", "sum"),
+            period_buses=("buses", "sum"),
+            period_trucks=("trucks", "sum"),
+        )
 
-    agg_data["flow"] = 60 / aggregation_time_period * agg_data["minute_flow"]
-    agg_data["cars"] = 60 / aggregation_time_period * agg_data["minute_cars"]
-    agg_data["buses"] = 60 / aggregation_time_period * agg_data["minute_buses"]
-    agg_data["trucks"] = 60 / aggregation_time_period * agg_data["minute_trucks"]
-    agg_data["density"] = agg_data["flow"].div(agg_data["smspeed"].values)
+    agg_data["flow"] = 60 / aggregation_time_period * agg_data["period_flow"]
+    agg_data["cars"] = 60 / aggregation_time_period * agg_data["period_cars"]
+    agg_data["buses"] = 60 / aggregation_time_period * agg_data["period_buses"]
+    agg_data["trucks"] = 60 / aggregation_time_period * agg_data["period_trucks"]
+    agg_data["density"] = agg_data["flow"].div(agg_data["period_speed"].values)
     agg_data["seconds"] = agg_data["aggregation"] * 60 * aggregation_time_period
     agg_data["seconds"] = agg_data["seconds"].astype("float64")
     agg_data["time"] = pd.to_datetime(agg_data["seconds"], unit="s")
     agg_data["time"] = pd.Series([val.strftime("%H:%M") for val in agg_data["time"]])
 
     end_time = time.perf_counter()
-    print(f"Aggregation took {end_time-start_time:0.4f} seconds")
-    return agg_data
 
-
-def aggregate_lane(
-    data: pd.DataFrame,
-    direction: int,
-    aggregation_time_period: int = constant.DEF_AGG_TIME_PER,
-) -> pd.DataFrame:
-    """
-    Function, that aggregates the collected data by lane and calculates \
-    space-mean speed, flow and density. \
-    Space-mean speed is calculated as harmonic average of speeds.
-
-    Parameters
-    ----------
-    data : pd.DataFrame
-        Collected data
-    direction : int
-        Direction of the road in interest, usually 1 or 2. Check the description of \
-        Traffic Measurement Station
-    aggregation_time_period : int, optional
-        Aggregation time period in minutes, by default constant.DEF_AGG_TIME_PER
-
-    Returns
-    -------
-    pd.DataFrame
-        Aggregated data set
-    """
-    start_time = time.perf_counter()
-
-    # Initialize resulting DataFrame
-    agg_data = pd.DataFrame()
-
-    # Copy initial data set to calculate aggregation periods for a slected direction
-    df = data[data["direction"] == direction]
-    df["aggregation"] = (df["hour"] * 60 + df["minute"]) / aggregation_time_period
-    df = df.astype({"aggregation": int})
-
-    # Aggregate flow and speed by time
-    agg_data = df.groupby(
-        ["id", "date", "aggregation", "direction", "lane"], as_index=False
-    ).agg(
-        smspeed=("speed", scipy.stats.hmean),
-        minute_flow=("cars", "count"),
-        minute_cars=("cars", "sum"),
-        minute_buses=("buses", "sum"),
-        minute_trucks=("trucks", "sum"),
-    )
-
-    agg_data["flow"] = 60 / aggregation_time_period * agg_data["minute_flow"]
-    agg_data["cars"] = 60 / aggregation_time_period * agg_data["minute_cars"]
-    agg_data["buses"] = 60 / aggregation_time_period * agg_data["minute_buses"]
-    agg_data["trucks"] = 60 / aggregation_time_period * agg_data["minute_trucks"]
-    agg_data["density"] = agg_data["flow"].div(agg_data["smspeed"].values)
-    agg_data["seconds"] = agg_data["aggregation"] * 60 * aggregation_time_period
-    agg_data["seconds"] = agg_data["seconds"].astype("float64")
-    agg_data["time"] = pd.to_datetime(agg_data["seconds"], unit="s")
-    agg_data["time"] = pd.Series([val.strftime("%H:%M") for val in agg_data["time"]])
-
-    end_time = time.perf_counter()
-    print(f"Aggregation took {end_time-start_time:0.4f} seconds")
+    print(f"Aggregation took {end_time-start_time:.4f} seconds")
     return agg_data
 
 
@@ -152,18 +86,15 @@ def bagging(
         pd.DataFrame with bagged data
     """
     start_time = time.perf_counter()
-
-    # Initilize the final data set
-    bag_data = pd.DataFrame()
     size_before = len(agg_data)
 
-    # Getting the max density and flow values to calculcate the size of the bag
-    maxDensity = agg_data["density"].max()
-    maxFlow = agg_data["flow"].max()
+    # Getting the max density and flow values to calculate the size of the bag
+    max_density = agg_data["density"].max()
+    max_flow = agg_data["flow"].max()
 
-    # Calclulating the size of the bag
-    grid_density_size = maxDensity / grid_size_x
-    grid_flow_size = maxFlow / grid_size_y
+    # Calculating the size of the bag
+    grid_density_size = max_density / grid_size_x
+    grid_flow_size = max_flow / grid_size_y
 
     # Assigning the bag number for density and
     agg_data["grid_density"] = agg_data["density"] / grid_density_size
@@ -185,8 +116,7 @@ def bagging(
 
     end_time = time.perf_counter()
     print(
-        f"Data bagging took {end_time-start_time:0.4f} seconds. Data reduction is \
-        {(1 - size_after/size_before)*100.0:0.2f}%"
+        f"Data bagging took {end_time-start_time:.4f} seconds. Data reduction is {(1 - size_after/size_before)*100.0:.2f}%" # noqa E501
     )
 
     return bag_data
@@ -199,17 +129,17 @@ def representor(
     Parameters
     ----------
     alpha : Sequence[float]
-        np.array of alpha coefficients
+        A numpy array of alpha coefficients
     beta : Sequence[float]
-        np.array of beta coefficients
+        A numpy array of beta coefficients
     x : Sequence[float]
-        np.array of input variables
+        A numpy array of input variables
     Calculation of representation function (Kuosmanen, 2008 / Formula 4.1)
 
     Returns
     -------
-    Sequence[float]
-        The minimum value g_hat for the each x
+    ArrayLike[float]
+        The minimum value of g_hat for each x
     """
     alpha_r = alpha.reshape(-1, 1)
     beta_r = beta.reshape(-1, 1)

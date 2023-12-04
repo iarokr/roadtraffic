@@ -1,0 +1,7 @@
+numpy==1.26.2
+pandas==2.0.3
+scipy==1.11.4
+pystoned==0.7.1
+requests==2.31.0
+tqdm==4.66.1
+pandas-stubs==2.1.1.230928
