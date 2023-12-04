@@ -2,22 +2,17 @@
 
 ![PyPI](https://img.shields.io/pypi/v/roadtraffic)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/roadtraffic)
-![PyPI - Format](https://img.shields.io/pypi/format/roadtraffic)
+![Build](https://img.shields.io/github/actions/workflow/status/iarokr/roadtraffic/publish-roadtraffic.yml)
+
 
 
 ## Overview
 
-The [roadtraffic](https://pypi.org/project/roadtraffic/) Python package for traffic data processing and fundamental diagram estimation. A fundamental diagram is estimated using convex quantile regression with the help of the [pyStoNED](https://github.com/ds2010/pyStoNED) package. The [mosek](https://www.mosek.com/) solver is used for the estimation. For the academic purposes, you can obtain a [free academic license](https://www.mosek.com/products/academic-licenses/) for the solver.
+The [roadtraffic](https://pypi.org/project/roadtraffic/) Python package for traffic data processing and fundamental diagram estimation. A fundamental diagram is estimated using convex regression with the help of the [pyStoNED](https://github.com/ds2010/pyStoNED) package. The [mosek](https://www.mosek.com/) solver is used for the estimation. For the academic purposes, you can obtain a [free academic license](https://www.mosek.com/products/academic-licenses/) for the solver. You can also use the free NEOS server for the estimation, but the computational time will be longer.
 
 Currently only data from Finnish roads, collected through this package is supported. The source of data is [Fintraffic / digitraffic.fi](https://www.digitraffic.fi/en/), license CC 4.0 BY.
 
-The package works with the raw data. The data could be aggregated across time and road direction/lane. The agreggated data is then bagged for the computational efficiency. The estimation of the fundamental diagram is done on the bagged data. Raw data availability depends on traffic measurement station. The earliest data comes from year 1995. New data becomes available every day at 3 am (Helsinki Time zone). Developers of the package are not affiliated with Fintraffic and can't influence neither the availability of data nor its quality.
-
-This package is a part of my PhD journey - you can follow it on my [personal website](https://iaroslavkriuchkov.com).
-
-## NOTE
-
-The package is in the initial development stage, and it will be upgraded as my research journey progresses. Feedback, suggestion and comments are highly appreciated as well as the bug reports! For now, you can send me an [e-mail](mailto:iaroslav.kriuchkov@aalto.fi). The contribution will be set up later. 
+The package works on the raw data. The data can be aggregated over time and road direction/lane. The aggregated data is then bagged for computational efficiency. The estimation of the fundamental diagram is done on the bagged data. The availability of raw data depends on the traffic measurement station. The earliest data are from 1995. New data are available every day at 3 am (Helsinki time zone). The developers of the package are not affiliated with Fintraffic and can't influence the availability or quality of the data.
 
 ## Installation
 The installation of the package is avalable through the PyPI:
@@ -26,53 +21,59 @@ The installation of the package is avalable through the PyPI:
 ```
 
 ## Basic usage
-The package offers an opportunity to work with Finnish traffic data. You can select a traffic measurement station (TMS or LAM, in Finnish) from the official [metadata](https://tie.digitraffic.fi/api/tms/v1/stations) using *tmsNumber* field or the [map](https://www.arcgis.com/home/webmap/viewer.html?webmap=10d97c7d9d9b41c180e6eb7e26f75be7) taking the integer part or *lamid* field. 
+The package offers an opportunity to work with Finnish traffic data. You can select a traffic measurement station (TMS or LAM, in Finnish) from the official [metadata](https://tie.digitraffic.fi/api/tms/v1/stations) using *tmsNumber* field or the [map](https://liikennetilanne.fintraffic.fi/kartta/?lang=fi&x=3010000&y=9720000&z=5&checkedLayers=1,10&basemap=streets-vector) taking the integer part or *lamid* field. 
 
-Let's take as an example the traffic management station number 162, located on Kehä II in Espoo, Finland and load, process and vizualize the data for September 10-20, 2019.
+Let's take as an example the traffic management station number 162, located on Kehä II in Espoo, Finland and load, process the data and estimate the model for September 10-11, 2019.
 ```python
 # Import dependencies
-import roadtraffic
 from roadtraffic import fintraffic 
 
 # Traffic measurement station of interest
 tms_id = 162
 
-# Initiate the list of days of interest (Sep 10-20, 2019)
+# Initiate the list of days (tuples) of interest (Sep 10-11, 2019)
 days_list = [
-    [2019, 253],
-    [2019, 254],
-    [2019, 255],
-    [2019, 256],
-    [2019, 257],
-    [2019, 258],
-    [2019, 259],
-    [2019, 260],
-    [2019, 261],
-    [2019, 262],
-    [2019, 263],
+    (2019, 253),
+    (2019, 254),
 ]
 
 # Specify the road direction
 # Information about the direction could be obtained from the metadata or the map
-direction = 2
+direction = 1
 
 # Initiate the class for Fintraffic data
-tms = fintraffic.FintrafficTMS(tms_id, days_list, direction)
+tms = fintraffic.TrafficMeasurementStation(tms_id, days_list)
 
 # Load raw data for the selected period
-tms.load_raw_data()
+tms.raw.load()
+
+# Clean data for the direction
+tms.raw.clean(direction=direction)
 
 # Aggregate data
-tms.aggregate_lane()
+tms.raw_to_agg(aggregation_time_period='5', aggregation_time_period_unit='min')
 
-# Plot data
-tms.plot_data(fintraffic.Representations.agg)
+# Bag data
+tms.agg_to_bag(num_bags_density=40, num_bags_flow=200)
+
+# Estimate the model for the median
+tms.bag.estimate_model("quantile", [0.5], email="test@test.test") # you can specify your email to receive the log file
+
+# Obtain the results
+tms.bag.models.get_estimate(0.5)
+
+# Estimate the model for the mean
+tms.bag.estimate_model("mean", email="test@test.test")
+
+# Obtain the results
+tms.bag.models.get_estimate("mean")
+
 ```
 
 
 
 ## Authors
-- [Iaroslav Kriuchkov](https://iaroslavkriuchkov.com), Doctoral Researcher at Aalto University, Finland
+- [Iaroslav Kriuchkov](https://www.researchgate.net/profile/Iaroslav-Kriuchkov-3), Doctoral Researcher at Aalto University School of Business, Finland
 - [Timo Kuosmanen](https://www.researchgate.net/profile/Timo-Kuosmanen), Professor at Turku University School of Economics, Finland
 
 ## License

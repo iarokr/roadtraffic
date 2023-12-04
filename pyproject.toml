@@ -1,14 +1,13 @@
 [project]
 name = "roadtraffic"
-version = "1.0.0-rc.1"
+version = "1.0.0"
 description = "A package for road traffic data analysis"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {file = "LICENSE", name = "GPLv3"}
+license = {text = "GNU General Public License v3 (GPLv3)"}
 keywords = ["road traffic", "data analysis", "convex regression", "quantile regression"]
 authors = [
-    {name = "Iaroslav Kriuchkov", email = "iaroslav.kriuchkov@aalto.fi"},
-    {name = "Timo Kuosmanen"}
+    {name = "Iaroslav Kriuchkov, Timo Kuosmanen", email = "iaroslav.kriuchkov@aalto.fi"}
     ]
 maintainers = [
     {name = "Iaroslav Kriuchkov", email = "iaroslav.kriuchkov@aalto.fi"}

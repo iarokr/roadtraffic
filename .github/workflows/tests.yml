@@ -1,8 +1,9 @@
 name: roadraffic tests
 
 on:
-  - push
-  - pull_request
+  push:
+    tags:
+      - 'v*.*.*'
 
 jobs:
     tests:
