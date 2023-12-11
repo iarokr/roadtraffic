@@ -1,8 +1,9 @@
 # roadtraffic
 
-![PyPI](https://img.shields.io/pypi/v/roadtraffic)
+[![PyPI version](https://badge.fury.io/py/roadtraffic.svg)](https://badge.fury.io/py/roadtraffic)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/roadtraffic)
 ![Build](https://img.shields.io/github/actions/workflow/status/iarokr/roadtraffic/publish-roadtraffic.yml)
+[![roadraffic tests](https://github.com/iarokr/roadtraffic/actions/workflows/tests.yml/badge.svg?branch=dev)](https://github.com/iarokr/roadtraffic/actions/workflows/tests.yml)
 
 
 
