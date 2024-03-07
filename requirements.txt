@@ -5,3 +5,5 @@ pystoned==0.7.1
 requests==2.31.0
 tqdm==4.66.1
 pandas-stubs==2.1.1.230928
+matplotlib==3.8.2
+seaborn==0.13.1

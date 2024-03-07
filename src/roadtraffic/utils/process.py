@@ -1,8 +1,9 @@
-import pandas as pd
-import numpy as np
-from typing import Sequence
-import scipy
 import time
+from typing import Sequence
+
+import numpy as np
+import pandas as pd
+import scipy
 
 from .constants import DEF_AGG_TIME_PER
 
@@ -13,8 +14,13 @@ def aggregate(
     aggregation_time_period: int = DEF_AGG_TIME_PER,
     aggregation_time_period_unit: str = "min",
 ) -> pd.DataFrame:
-    assert aggregation_time_period_unit in ["min", "sec"], "[LOG]: AssertionError: Wrong aggregation time period unit." # noqa E501
+    assert aggregation_time_period_unit in [
+        "min",
+        "sec",
+    ], "[LOG]: AssertionError: Wrong aggregation time period unit."  # noqa E501
     start_time = time.perf_counter()
+
+    period_multiplier = 1
 
     # Copy initial data set to calculate aggregation periods for a selected direction
     df = data.copy(deep=True)
@@ -24,6 +30,7 @@ def aggregate(
         df["aggregation"] = (
             df["hour"] * 60 * 60 + df["minute"] * 60 + df["second"]
         ) / aggregation_time_period
+        period_multiplier = 60
     df = df.astype({"aggregation": int})
 
     # Aggregate flow and speed by time
@@ -48,15 +55,32 @@ def aggregate(
             period_trucks=("trucks", "sum"),
         )
 
-    agg_data["flow"] = 60 / aggregation_time_period * agg_data["period_flow"]
-    agg_data["cars"] = 60 / aggregation_time_period * agg_data["period_cars"]
-    agg_data["buses"] = 60 / aggregation_time_period * agg_data["period_buses"]
-    agg_data["trucks"] = 60 / aggregation_time_period * agg_data["period_trucks"]
+    agg_data["flow"] = (
+        60 * period_multiplier / aggregation_time_period * agg_data["period_flow"]
+    )
+    agg_data["cars"] = (
+        60 * period_multiplier / aggregation_time_period * agg_data["period_cars"]
+    )
+    agg_data["buses"] = (
+        60 * period_multiplier / aggregation_time_period * agg_data["period_buses"]
+    )
+    agg_data["trucks"] = (
+        60 * period_multiplier / aggregation_time_period * agg_data["period_trucks"]
+    )
     agg_data["density"] = agg_data["flow"].div(agg_data["period_speed"].values)
-    agg_data["seconds"] = agg_data["aggregation"] * 60 * aggregation_time_period
+    agg_data["seconds"] = (
+        agg_data["aggregation"] * 60 * aggregation_time_period / period_multiplier
+    )
     agg_data["seconds"] = agg_data["seconds"].astype("float64")
     agg_data["time"] = pd.to_datetime(agg_data["seconds"], unit="s")
-    agg_data["time"] = pd.Series([val.strftime("%H:%M") for val in agg_data["time"]])
+    if aggregation_time_period_unit == "sec":
+        agg_data["time"] = pd.Series(
+            [val.strftime("%H:%M:%S") for val in agg_data["time"]]
+        )
+    else:
+        agg_data["time"] = pd.Series(
+            [val.strftime("%H:%M") for val in agg_data["time"]]
+        )
 
     end_time = time.perf_counter()
 
@@ -116,7 +140,7 @@ def bagging(
 
     end_time = time.perf_counter()
     print(
-        f"Data bagging took {end_time-start_time:.4f} seconds. Data reduction is {(1 - size_after/size_before)*100.0:.2f}%" # noqa E501
+        f"Data bagging took {end_time-start_time:.4f} seconds. Data reduction is {(1 - size_after/size_before)*100.0:.2f}%"  # noqa E501
     )
 
     return bag_data
@@ -149,3 +173,127 @@ def representor(
     g_hat_min = mult_a.min(axis=0)
 
     return g_hat_min
+
+
+def rolling_window(
+    input_data: pd.DataFrame,
+    hour_from: int,
+    hour_to: int,
+    window_interval: int,
+    gap_interval: int,
+    window_interval_unit: str,
+    gap_interval_unit: str,
+    by_lane: bool,
+) -> pd.DataFrame:
+    # create multiplicators for window and gap size depending on the unit
+    if window_interval_unit == "min":
+        window_size_mult = 60
+    elif window_interval_unit == "sec":
+        window_size_mult = 1
+    else:
+        raise ValueError("window_interval_unit must be either min or sec")
+
+    if gap_interval_unit == "min":
+        gap_size_mult = 60
+    elif gap_interval_unit == "sec":
+        gap_size_mult = 1
+    else:
+        raise ValueError("gap_interval_unit must be either min or sec")
+
+    # create empty list for the rollings
+    rollings = []
+
+    # iterate over years
+    for year in np.sort(input_data.year.unique()):
+        # iterate over days
+        for day in np.sort(input_data.day.unique()):
+            # iterate over lanes
+            for lane in np.sort(input_data.lane.unique()):
+                # iterate over time intervals
+                for begin_time in range(
+                    hour_from * 60 * 60 * 100,
+                    hour_to * 60 * 60 * 100 - window_interval * window_size_mult * 100,
+                    gap_interval * gap_size_mult * 100,
+                ):
+                    end_time = begin_time + window_interval * window_size_mult * 100
+
+                    data = input_data.loc[
+                        (
+                            (input_data.total_time >= begin_time)
+                            & (input_data.total_time < end_time)
+                            & (input_data.lane == lane)
+                        ),
+                        :,
+                    ]
+
+                    flow = len(data) * 60 / window_interval
+                    hmean_speed = scipy.stats.hmean(data.speed)
+                    density = flow / hmean_speed
+                    cars = data.cars.sum()
+                    buses = data.buses.sum()
+                    trucks = data.trucks.sum()
+                    hmean_speed_all_lanes = scipy.stats.hmean(
+                        input_data.loc[
+                            (
+                                (input_data.total_time >= begin_time)
+                                & (input_data.total_time < end_time)
+                            ),
+                            "speed",
+                        ]
+                    )
+                    rollings.append(
+                        [
+                            year,
+                            day,
+                            lane,
+                            begin_time,
+                            end_time,
+                            flow,
+                            density,
+                            hmean_speed,
+                            hmean_speed_all_lanes,
+                            cars,
+                            buses,
+                            trucks,
+                        ]
+                    )
+
+    rolling_data = pd.DataFrame(
+        rollings,
+        columns=[
+            "year",
+            "day",
+            "lane",
+            "begin_time",
+            "end_time",
+            "flow",
+            "density",
+            "speed",
+            "speed_all_lanes",
+            "cars",
+            "buses",
+            "trucks",
+        ],
+    )
+
+    if not by_lane:
+        rolling_data = rolling_data.groupby(
+            ["year", "day", "begin_time", "end_time"], as_index=False
+        ).agg(
+            flow=("flow", "sum"),
+            speed=("speed_all_lanes", "mean"),
+            cars=("cars", "sum"),
+            buses=("buses", "sum"),
+            trucks=("trucks", "sum"),
+        )
+        rolling_data["density"] = rolling_data["flow"].div(rolling_data["speed"])
+    else:
+        rolling_data.drop(columns=["speed_all_lanes"], inplace=True)
+
+    rolling_data["time"] = (rolling_data["end_time"] // 100).astype("float64")
+    rolling_data["time"] = pd.to_datetime(rolling_data["time"], unit="s")
+    rolling_data["time"] = pd.Series(
+        [val.strftime("%H:%M:%S") for val in rolling_data["time"]]
+    )
+
+    return rolling_data

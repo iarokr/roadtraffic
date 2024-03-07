@@ -64,3 +64,64 @@ DEF_NUM_BAGS_FLOW: int = 400
 """
 Default number of bags for flow to be used in the bagging procedure.
 """
+
+TMS_LIST: list[int] = [10, 11, 109, 116, 118, 126, 145, 146, 147, 148, 149]
+"""
+List of the most used traffic measurement stations.
+"""
+
+
+LANES: dict = {
+    10: {1: [1, 2, 3], 2: [4, 5, 6]},
+    11: {1: [1, 2], 2: [3, 4]},
+    109: {1: [1, 2], 2: [3, 4]},
+    116: {1: [1, 2, 3], 2: [4, 5, 6]},
+    118: {1: [1, 2, 3, 4, 5], 2: [6, 7, 8]},
+    126: {1: [1, 2, 3], 2: [4, 5, 6]},
+    145: {1: [1, 2, 3], 2: [4, 5, 6, 7]},
+    146: {1: [1, 2, 3], 2: [4, 5, 6]},
+    147: {1: [1, 2, 3, 4], 2: [5, 6, 7, 8]},
+    148: {1: [1, 2], 2: [3, 4]},
+    149: {1: [1, 2], 2: [3, 4]},
+}
+"""
+Dictionary of the most used traffic measurement stations and their lanes.
+"""
+
+FREE_FLOW_SPEED: dict = {
+    10: {1: 70, 2: 70},
+    11: {1: 60, 2: 60},
+    109: {1: 100, 2: 100},
+    116: {1: 60, 2: 60},
+    118: {1: 60, 2: 60},
+    126: {1: 80, 2: 80},
+    145: {1: 80, 2: 80},
+    146: {1: 80, 2: 80},
+    147: {1: 80, 2: 80},
+    148: {1: 80, 2: 80},
+    149: {1: 80, 2: 80},
+}
+"""
+Dictionary of the most used traffic measurement stations and their \
+free flow speeds.
+"""
+
+DEF_ROLLING_WINDOW_INTERVAL: int = 5
+"""
+Default rolling window interval.
+"""
+
+DEF_ROLLING_WINDOW_INTERVAL_UNIT: str = "min"
+"""
+Default rolling window interval unit.
+"""
+
+DEF_ROLLING_GAP_INTERVAL: int = 15
+"""
+Default rolling gap interval.
+"""
+
+DEF_ROLLING_GAP_INTERVAL_UNIT: str = "sec"
+"""
+Default rolling gap interval unit.
+"""

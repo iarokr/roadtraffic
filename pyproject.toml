@@ -1,17 +1,17 @@
 [project]
 name = "roadtraffic"
-version = "1.1.0-alpha.0"
+version = "1.0.1-alpha.0"
 description = "A package for road traffic data analysis"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "GNU General Public License v3 (GPLv3)"}
+license = { text = "GNU General Public License v3 (GPLv3)" }
 keywords = ["road traffic", "data analysis", "convex regression", "quantile regression"]
 authors = [
-    {name = "Iaroslav Kriuchkov, Timo Kuosmanen", email = "iaroslav.kriuchkov@aalto.fi"}
-    ]
+    { name = "Iaroslav Kriuchkov, Timo Kuosmanen", email = "iaroslav.kriuchkov@aalto.fi" }
+]
 maintainers = [
-    {name = "Iaroslav Kriuchkov", email = "iaroslav.kriuchkov@aalto.fi"}
-    ]
+    { name = "Iaroslav Kriuchkov", email = "iaroslav.kriuchkov@aalto.fi" }
+]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -35,7 +35,9 @@ dependencies = [
     "pystoned >= 0.6.6",
     "requests >= 2.31",
     "urllib3 == 1.26.6",
-    "pandas-stubs >= 2.1.1"
+    "pandas-stubs >= 2.1.1",
+    "matplotlib >= 3.8.0",
+    "seaborn >= 0.13.1",
 ]
 
 [project.optional-dependencies]

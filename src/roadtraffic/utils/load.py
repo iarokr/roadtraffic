@@ -113,7 +113,6 @@ def read_raw_report(
     )
 
     if load_path is not None:
-
         file_path_u = load_path + "/" + file_name_u
         file_path_u = pathlib.Path(file_path_u)
 
@@ -123,7 +122,7 @@ def read_raw_report(
         if df.empty:
             # Stop timer
             # end_time = time.perf_counter()
-            message = f"[LOG] Warning: {file_name_u} is not found at {load_path}. An empty pd.DataFrame will be returned." # noqa E501
+            message = f"[LOG] Warning: {file_name_u} is not found at {load_path}. An empty pd.DataFrame will be returned."  # noqa E501
             warnings.warn(message=message)
             if save is True:
                 warnings.warn(
@@ -131,7 +130,6 @@ def read_raw_report(
                     # noqa E501
                 )
         else:
-
             # Stop timer
             # end_time = time.perf_counter()
 
@@ -204,7 +202,7 @@ def read_raw_report(
                 # end_time = time.perf_counter()
                 # print(
                 #    f"Download successful - file for the sensor {tms_id} for the day {day} in year {year} was loaded in {end_time - start_time:.4f} seconds"  # noqa E501
-                #)  # noqa E501
+                # )  # noqa E501
 
                 # Save to .pkl if necessary
                 if save is True:
@@ -232,12 +230,12 @@ def read_raw_report(
 
 
 def read_many_reports(
-        tms_id: int,
-        days_list: list[tuple[int, int]],
-        save: bool = False,
-        load_path: typing.Optional[str] = None,
-        save_path: typing.Optional[str] = None,
-        sort_total_time: bool = True
+    tms_id: int,
+    days_list: list[tuple[int, int]],
+    save: bool = False,
+    load_path: typing.Optional[str] = None,
+    save_path: typing.Optional[str] = None,
+    sort_total_time: bool = True,
 ) -> pd.DataFrame:
     """
     Download the raw data from Fintraffic for the specified station for a list of days.
@@ -266,9 +264,15 @@ def read_many_reports(
         A `pd.DataFrame` with the raw data.
     """
     assert isinstance(days_list, list), "days_list must be a list."
-    assert all([isinstance(day, tuple) for day in days_list]), "[LOG] AssertionError: days_list must contain only tuples." # noqa E501
-    assert all([isinstance(day[0], int) for day in days_list]), "[LOG] AssertionError: days_list must contain only tuples of integers." # noqa E501
-    assert all([isinstance(day[1], int) for day in days_list]), "[LOG] AssertionError: days_list must contain only tuples of integers." # noqa E501
+    assert all(
+        [isinstance(day, tuple) for day in days_list]
+    ), "[LOG] AssertionError: days_list must contain only tuples."  # noqa E501
+    assert all(
+        [isinstance(day[0], int) for day in days_list]
+    ), "[LOG] AssertionError: days_list must contain only tuples of integers."  # noqa E501
+    assert all(
+        [isinstance(day[1], int) for day in days_list]
+    ), "[LOG] AssertionError: days_list must contain only tuples of integers."  # noqa E501
 
     # Initiate timer
     start_time = time.perf_counter()
@@ -299,7 +303,7 @@ def read_many_reports(
     # Stop timer
     end_time = time.perf_counter()
     print(
-        f"[LOG] Download finished - {loaded_files}/{total_files} files were loaded in {end_time - start_time:.4f} seconds" # noqa E501
+        f"[LOG] Download finished - {loaded_files}/{total_files} files were loaded in {end_time - start_time:.4f} seconds"  # noqa E501
     )
 
     return df_all
@@ -311,7 +315,7 @@ def process_data(
     lanes: typing.Optional[list] = None,
     delete_if_faulty: bool = True,
     hour_from: int = 0,
-    hour_to: int = 23,
+    hour_to: int = 24,
     assign_date: bool = True,
     calculate_vehicles: bool = True,
 ) -> pd.DataFrame:
@@ -331,7 +335,7 @@ def process_data(
     hour_from : int, optional
         Hour from which beginning the data should be included, by default 0
     hour_to : int, optional
-        Hour to which end the data should be included, by default 23
+        Hour to which end the data should be included, by default 24
     assign_date : bool, optional
         If `True`, assigns the date to the data, by default True
     calculate_vehicles : bool, optional
@@ -346,9 +350,9 @@ def process_data(
     AssertionError
         lanes must contain only integers.
     AssertionError
-        hour_from must be greater or equal to 0 but less than 23.
+        hour_from must be greater or equal to 0 but less or equal to 23.
     AssertionError
-        hour_to must be greater than hour_from and less than 24.
+        hour_to must be greater than hour_from and less or equal to 24.
 
     Returns
     -------
@@ -362,7 +366,9 @@ def process_data(
 
     # LANES
     if lanes is not None:
-        assert lanes is None or isinstance(lanes, list), "[LOG] AssertionError: lanes must be a list."
+        assert lanes is None or isinstance(
+            lanes, list
+        ), "[LOG] AssertionError: lanes must be a list."
         assert lanes is None or all(
             [isinstance(lane, int) for lane in lanes]
         ), "[LOG] AssertionError: lanes must contain only integers."
@@ -374,9 +380,9 @@ def process_data(
         0 <= hour_from <= 23
     ), "[LOG] AssertionError: hour_from must be greater or equal to 0 but less or equal to 23."
     assert (
-        hour_from <= hour_to < 24
+        hour_from <= hour_to <= 24
     ), "[LOG] AssertionError: hour_to must be greater or equal to hour_from and less than 24."
-    df = df[(df["hour"] >= hour_from) & (df["hour"] <= hour_to)]
+    df = df[(df["hour"] >= hour_from) & (df["hour"] < hour_to)]
 
     # IF_FAULTY
     if delete_if_faulty:
@@ -389,7 +395,7 @@ def process_data(
             lambda x: datetime.date(int(x.split("-")[0]) + 2000, 1, 1)
             + datetime.timedelta(int(x.split("-")[1]) - 1)
         )
-        df.drop(columns=['temp'], inplace=True)
+        df.drop(columns=["temp"], inplace=True)
 
     # Calculate the number of different vehicles
     if calculate_vehicles:

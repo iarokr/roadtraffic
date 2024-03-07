@@ -1,9 +1,10 @@
 import typing
 
-from numpy.typing import ArrayLike
 import pandas as pd
+from numpy.typing import ArrayLike
 
 from ..utils import models, constants
+
 
 # from ..utils import plot
 
@@ -39,7 +40,8 @@ class AggregatedData:
         self._speed: typing.Optional[ArrayLike] = None
         self._density: typing.Optional[ArrayLike] = None
         self.aggregation_time_period: int = constants.DEF_AGG_TIME_PER
-        self.aggregation_time_period: str = "min"
+        self.aggregation_time_period_unit: str = "min"
+        self.aggregation_by_lane: bool = False
         self.models: models.ModelResults = models.ModelResults()
         self.quantiles: list[float] = []
         pass
