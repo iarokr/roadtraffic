@@ -18,6 +18,7 @@ All notable changes to the `roadtraffic` project will be documented in this file
 - plots module added:
     - Plotting the timeline - flow, density, speed against time
     - Plotting the fundamental relationship - any pair of flow, density, speed
+- Estimation with contextual variable is possible
 
 ### Fixed
 

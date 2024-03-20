@@ -22,7 +22,7 @@ from .utils.constants import (
 
 
 class TrafficMeasurementStation:
-    class Raw(RawData):
+    class _Raw(RawData):
         """A class to represent raw data of a traffic measurement station.
 
         Attributes
@@ -105,6 +105,8 @@ class TrafficMeasurementStation:
                 2,
             ], "[LOG] AssertionError: direction must be either 1 or 2."
 
+            cleaning_params["direction"] = direction
+
             if self.tms_id in TMS_LIST:
                 lanes = LANES[self.tms_id][direction]
                 cleaning_params["lanes"] = lanes
@@ -159,21 +161,21 @@ class TrafficMeasurementStation:
             )
             pass
 
-    class Aggregated(AggregatedData):
+    class _Aggregated(AggregatedData):
         """A class to represent aggregated data of a traffic measurement station."""
 
         def __init__(self):
             super().__init__()
             pass
 
-    class Bagged(BaggedData):
+    class _Bagged(BaggedData):
         """A class to represent bagged data of a traffic measurement station."""
 
         def __init__(self):
             super().__init__()
             pass
 
-    class Rolling(RollingData):
+    class _Rolling(RollingData):
         """A class to represent rolling data of a traffic measurement station."""
 
         def __init__(self):
@@ -184,10 +186,10 @@ class TrafficMeasurementStation:
         self.tms_id: int = tms_id
         self.days_list: list[tuple[int, int]] = days_list
 
-        self.raw = TrafficMeasurementStation.Raw(self.tms_id, self.days_list)
-        self.agg = TrafficMeasurementStation.Aggregated()
-        self.bag = TrafficMeasurementStation.Bagged()
-        self.roll = TrafficMeasurementStation.Rolling()
+        self.raw = TrafficMeasurementStation._Raw(self.tms_id, self.days_list)
+        self.agg = TrafficMeasurementStation._Aggregated()
+        self.bag = TrafficMeasurementStation._Bagged()
+        self.roll = TrafficMeasurementStation._Rolling()
         pass
 
     def raw_to_agg(
@@ -228,7 +230,7 @@ class TrafficMeasurementStation:
 
         _density = self.agg.data["density"].to_numpy().T
         _flow = self.agg.data["flow"].to_numpy().T
-        _speed = self.agg.data["period_speed"].to_numpy().T
+        _speed = self.agg.data["speed"].to_numpy().T
         _data_array = (np.stack([_density, _flow, _speed], axis=0)).T
         _data_array = _data_array[np.argsort(_data_array[:, 0])].T
         self.agg._density = _data_array[0]
@@ -318,6 +320,7 @@ class TrafficMeasurementStation:
         self,
         num_bags_density: int = DEF_NUM_BAGS_DENSITY,
         num_bags_flow: int = DEF_NUM_BAGS_FLOW,
+        context: typing.Optional[str] = None,
     ) -> None:
         """Convert aggregated data to bagged data.
 
@@ -327,6 +330,8 @@ class TrafficMeasurementStation:
             Number of bags for density to be used in the bagging procedure, by default DEF_NUM_BAGS_DENSITY
         num_bags_flow : int
             Number of bags for flow to be used in the bagging procedure, by default DEF_NUM_BAGS_FLOW
+        context : typing.Optional[str], optional
+            Column name to group the data by, by default None
 
         Raises
         ------
@@ -334,9 +339,23 @@ class TrafficMeasurementStation:
             If aggregated data is not aggregated.
         """
         assert self.agg.data is not None, "[LOG] AssertionError: aggregate data first."
+        assert (
+            num_bags_flow > 0
+        ), "[LOG] AssertionError: num_bags_flow must be greater than 0."
+        assert (
+            num_bags_density > 0
+        ), "[LOG] AssertionError: num_bags_density must be greater than 0."
+
+        if context is not None:
+            assert (
+                context in self.agg.data.columns
+            ), "[LOG] AssertionError: context must be a column in the data."
 
         self.bag.data = process.bagging(
-            self.agg.data, grid_size_x=num_bags_density, grid_size_y=num_bags_flow
+            self.agg.data,
+            grid_size_x=num_bags_density,
+            grid_size_y=num_bags_flow,
+            group_by=context,
         )
         self.bag.bag_size_flow = num_bags_flow
         self.bag.bag_size_density = num_bags_density
@@ -349,5 +368,6 @@ class TrafficMeasurementStation:
         self.bag._density = _data_array[0]
         self.bag._flow = _data_array[1]
         self.bag._weight = _data_array[2]
+        self.bag.context = context
 
         pass

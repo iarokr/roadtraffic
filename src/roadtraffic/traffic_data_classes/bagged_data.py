@@ -1,7 +1,7 @@
 import typing
 
-from numpy.typing import ArrayLike
 import pandas as pd
+from numpy.typing import ArrayLike
 
 from ..utils import models
 
@@ -16,6 +16,7 @@ class BaggedData:
         self._weight: typing.Optional[ArrayLike] = None
         self.bag_size_flow: typing.Optional[int] = None
         self.bag_size_density: typing.Optional[int] = None
+        self.context: typing.Optional[str] = None
 
         self.models: models.ModelResults = models.ModelResults()
         self.quantiles: list[float] = []
@@ -27,9 +28,10 @@ class BaggedData:
         quantiles: typing.Optional[list[float]] = None,
         penalty: typing.Optional[str] = None,
         eta: typing.Optional[float] = None,
-        email: str = None,
+        context: typing.Optional[str] = None,
+        email: typing.Optional[str] = None,
     ) -> None:
-        """ Estimates a convex nonparametric least squares (CNLS) or convex quantile regression (CQR) model for
+        """Estimates a convex nonparametric least squares (CNLS) or convex quantile regression (CQR) model for
             bagged data.
 
         Parameters
@@ -44,6 +46,8 @@ class BaggedData:
             `penalty='l2'` (L2 norm), or `penalty='l3'` (Lipschitz norm), by default None
         eta : float, optional
             Value of the tuning parameter if `penalty` is in `['l1', 'l2', 'l3']`, by default None
+        context : str, optional
+            Contextual variable to account for in the optimization problem
         email : str, optional
             For external optimization on the NEOS server, by default None
 
@@ -54,7 +58,6 @@ class BaggedData:
             Quantiles must be a non-empty list.
             Quantiles must be between 0 and 1.
             Data must be loaded first.
-            Data contains more than 3000 observations. Apply bagging first.
         """
         # if quantiles is None:
         #    quantiles = [0.5]
@@ -74,6 +77,13 @@ class BaggedData:
                 eta is not None
             ), "[LOG] AssertionError: eta must be specified if penalty is selected."
 
+        z = None
+        if context is not None:
+            assert (
+                context in self.data.columns
+            ), "[LOG] AssertionError: Contextual variable is not in data."
+            z = self.data[context]
+
         if model_type == "quantile":
             assert (
                 len(quantiles) > 0
@@ -91,6 +101,7 @@ class BaggedData:
                         x=self._density,
                         y=self._flow,
                         weight=self._weight,
+                        z=z,
                         quantile=q,
                         penalty=penalty,
                         eta=eta,
@@ -98,9 +109,14 @@ class BaggedData:
                     )
                 else:
                     model = models._wcqr(
-                        x=self._density, y=self._flow, weight=self._weight, quantile=q, email=email
+                        x=self._density,
+                        y=self._flow,
+                        weight=self._weight,
+                        z=z,
+                        quantile=q,
+                        email=email,
                     )
-                self.models._add_model(model, q, penalty, eta)
+                self.models._add_model(model, q, penalty, eta, context)
 
         elif model_type == "mean":
             if penalty is not None:
@@ -108,11 +124,14 @@ class BaggedData:
                     x=self._density,
                     y=self._flow,
                     weight=self._weight,
+                    z=z,
                     penalty=penalty,
                     eta=eta,
                     email=email,
                 )
             else:
-                model = models._wcnls(x=self._density, y=self._flow, weight=self._weight, email=email)
-            self.models._add_model(model, "mean", penalty, eta)
+                model = models._wcnls(
+                    x=self._density, y=self._flow, weight=self._weight, z=z, email=email
+                )
+            self.models._add_model(model, "mean", penalty, eta, context)
         pass

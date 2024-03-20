@@ -1,6 +1,6 @@
 [project]
 name = "roadtraffic"
-version = "1.0.1-alpha.0"
+version = "1.0.1-alpha.1"
 description = "A package for road traffic data analysis"
 readme = "README.md"
 requires-python = ">=3.9"

@@ -44,6 +44,7 @@ class AggregatedData:
         self.aggregation_by_lane: bool = False
         self.models: models.ModelResults = models.ModelResults()
         self.quantiles: list[float] = []
+        self.context: typing.Optional[str] = None
         pass
 
     # def load_csv(
@@ -95,6 +96,7 @@ class AggregatedData:
         quantiles: typing.Optional[list[float]] = None,
         penalty: typing.Optional[str] = None,
         eta: typing.Optional[float] = None,
+        context: typing.Optional[str] = None,
         email: str = None,
     ) -> None:
         """ Estimates a convex nonparametric least squares (CNLS) or convex quantile regression (CQR) model for the\\
@@ -112,6 +114,8 @@ class AggregatedData:
             `penalty='l2'` (L2 norm), or `penalty='l3'` (Lipschitz norm), by default None
         eta : float, optional
             Value of the tuning parameter if `penalty` is in `['l1', 'l2', 'l3']`, by default None
+        context : str, optional
+            Contextual variable, by default None
         email : str, optional
             For external optimization on the NEOS server, by default None
 
@@ -145,6 +149,14 @@ class AggregatedData:
                 eta is not None
             ), "[LOG] AssertionError: eta must be specified if penalty is selected."
 
+        if context is not None:
+            z = self.data[context]
+            assert (
+                context in self.data.columns
+            ), "[LOG] AssertionError: Context must be a column in the data."
+        else:
+            z = None
+
         if model_type == "quantile":
             assert (
                 len(quantiles) > 0
@@ -161,6 +173,7 @@ class AggregatedData:
                     model = models._pcqr(
                         x=self._density,
                         y=self._flow,
+                        z=z,
                         quantile=q,
                         penalty=penalty,
                         eta=eta,
@@ -168,23 +181,67 @@ class AggregatedData:
                     )
                 else:
                     model = models._cqr(
-                        x=self._density, y=self._flow, quantile=q, email=email
+                        x=self._density, y=self._flow, z=z, quantile=q, email=email
                     )
-                self.models._add_model(model, q, penalty, eta)
+                self.models._add_model(model, q, penalty, eta, context)
 
         elif model_type == "mean":
             if penalty is not None:
                 model = models._pcnls(
                     x=self._density,
                     y=self._flow,
+                    z=z,
                     penalty=penalty,
                     eta=eta,
                     email=email,
                 )
             else:
-                model = models._cnls(x=self._density, y=self._flow, email=email)
-            self.models._add_model(model, "mean", penalty, eta)
+                model = models._cnls(x=self._density, y=self._flow, z=z, email=email)
+            self.models._add_model(model, "mean", penalty, eta, context)
         pass
+
+    def create_contextual_variable(
+        self,
+        speed_limit: typing.Optional[float] = None,
+        density_limit: typing.Optional[float] = None,
+    ) -> None:
+        """Create a contextual variable for the aggregated data.
+        If `speed_limit` is provided, the contextual variable will be `contextual_speed` and will be equal to 1 if
+        `speed` is below the `speed_limit` and 0 otherwise.
+        If `density_limit` is provided, the contextual variable
+        will be `contextual_density` and will be equal to 1 if `density` is above the `density_limit` and 0 otherwise.
+        Only one contextual variable can be created at a time.
+
+        Parameters
+        ----------
+        speed_limit : float, optional
+            Speed limit value, by default None
+        density_limit : float, optional
+            Density limit value, by default None
+
+        Raises
+        ------
+        AssertionError
+            Speed limit and density limit cannot be provided at the same time.
+        """
+        if speed_limit is not None and density_limit is not None:
+            raise AssertionError(
+                "[LOG] AssertionError: Speed limit and density limit cannot be provided at the same time."
+            )
+
+        assert self.data is not None, "[LOG] AssertionError: No data is available"
+
+        if speed_limit is not None:
+            self.data["contextual_speed"] = (self.data["speed"] <= speed_limit).astype(
+                int
+            )
+            self.context = "contextual_speed"
+        elif density_limit is not None:
+            self.data["contextual_density"] = (
+                self.data["density"] >= density_limit
+            ).astype(int)
+            self.context = "contextual_density"
+        return None
 
 
 #    def plot(self, quantiles=None, figure_name=None) -> None:

@@ -1,9 +1,10 @@
 import time
-from typing import Sequence
+import typing
 
 import numpy as np
 import pandas as pd
 import scipy
+from numpy.typing import ArrayLike
 
 from .constants import DEF_AGG_TIME_PER
 
@@ -38,7 +39,7 @@ def aggregate(
         agg_data = df.groupby(
             ["id", "date", "aggregation", "direction", "lane"], as_index=False
         ).agg(
-            period_speed=("speed", scipy.stats.hmean),
+            speed=("speed", scipy.stats.hmean),
             period_flow=("cars", "count"),
             period_cars=("cars", "sum"),
             period_buses=("buses", "sum"),
@@ -48,7 +49,7 @@ def aggregate(
         agg_data = df.groupby(
             ["id", "date", "aggregation", "direction"], as_index=False
         ).agg(
-            period_speed=("speed", scipy.stats.hmean),
+            speed=("speed", scipy.stats.hmean),
             period_flow=("cars", "count"),
             period_cars=("cars", "sum"),
             period_buses=("buses", "sum"),
@@ -67,7 +68,7 @@ def aggregate(
     agg_data["trucks"] = (
         60 * period_multiplier / aggregation_time_period * agg_data["period_trucks"]
     )
-    agg_data["density"] = agg_data["flow"].div(agg_data["period_speed"].values)
+    agg_data["density"] = agg_data["flow"].div(agg_data["speed"].values)
     agg_data["seconds"] = (
         agg_data["aggregation"] * 60 * aggregation_time_period / period_multiplier
     )
@@ -89,7 +90,10 @@ def aggregate(
 
 
 def bagging(
-    agg_data: pd.DataFrame, grid_size_x: int = 70, grid_size_y: int = 400
+    agg_data: pd.DataFrame,
+    grid_size_x: int = 70,
+    grid_size_y: int = 400,
+    group_by: typing.Optional[str] = None,
 ) -> pd.DataFrame:
     """
     This function is used to reduce computational complexity for \
@@ -103,6 +107,8 @@ def bagging(
         Number of bags for x-axis, by default 70
     grid_size_y : int, optional
         Number of bags for y-axis, by default 400
+    group_by : typing.Optional[str], optional
+        Column to group by, by default None
 
     Returns
     -------
@@ -120,24 +126,52 @@ def bagging(
     grid_density_size = max_density / grid_size_x
     grid_flow_size = max_flow / grid_size_y
 
-    # Assigning the bag number for density and
-    agg_data["grid_density"] = agg_data["density"] / grid_density_size
-    agg_data["grid_flow"] = agg_data["flow"] / grid_flow_size
-    agg_data = agg_data.astype({"grid_density": int, "grid_flow": int})
+    # Assigning the bag number for density and flow
+    if group_by is None:
+        agg_data["grid_density"] = agg_data["density"] / grid_density_size
+        agg_data["grid_flow"] = agg_data["flow"] / grid_flow_size
+        agg_data = agg_data.astype({"grid_density": int, "grid_flow": int})
 
-    # Calculating the centroid and the weight of each bag
-    bag_data = agg_data.groupby(
-        ["id", "direction", "grid_density", "grid_flow"], as_index=False
-    ).agg(
-        bag_size=("id", "count"),
-        sum_flow=("flow", "sum"),
-        sum_density=("density", "sum"),
-    )
-    bag_data["centroid_flow"] = bag_data["sum_flow"].div(bag_data["bag_size"])
-    bag_data["centroid_density"] = bag_data["sum_density"].div(bag_data["bag_size"])
-    bag_data["weight"] = bag_data["bag_size"].div(len(agg_data))
+        # Calculating the centroid and the weight of each bag
+        bag_data = agg_data.groupby(
+            ["id", "direction", "grid_density", "grid_flow"], as_index=False
+        ).agg(
+            bag_size=("id", "count"),
+            sum_flow=("flow", "sum"),
+            sum_density=("density", "sum"),
+        )
+        bag_data["centroid_flow"] = bag_data["sum_flow"].div(bag_data["bag_size"])
+        bag_data["centroid_density"] = bag_data["sum_density"].div(bag_data["bag_size"])
+        bag_data["weight"] = bag_data["bag_size"].div(len(agg_data))
+
+    else:
+        bag_data = pd.DataFrame()
+        for group in agg_data[group_by].unique():
+            group_data = agg_data[agg_data[group_by] == group]
+            group_data["grid_density"] = group_data["density"] / grid_density_size
+            group_data["grid_flow"] = group_data["flow"] / grid_flow_size
+            group_data = group_data.astype({"grid_density": int, "grid_flow": int})
+            group_bag_data = group_data.groupby(
+                ["id", "direction", "grid_density", "grid_flow"], as_index=False
+            ).agg(
+                bag_size=("id", "count"),
+                sum_flow=("flow", "sum"),
+                sum_density=("density", "sum"),
+            )
+            group_bag_data["centroid_flow"] = group_bag_data["sum_flow"].div(
+                group_bag_data["bag_size"]
+            )
+            group_bag_data["centroid_density"] = group_bag_data["sum_density"].div(
+                group_bag_data["bag_size"]
+            )
+            group_bag_data["weight"] = group_bag_data["bag_size"].div(len(agg_data))
+            group_bag_data[group_by] = group
+            if group == agg_data[group_by].unique()[0]:
+                bag_data = group_bag_data
+            else:
+                bag_data = pd.concat([bag_data, group_bag_data])
+    
     size_after = len(bag_data)
-
     end_time = time.perf_counter()
     print(
         f"Data bagging took {end_time-start_time:.4f} seconds. Data reduction is {(1 - size_after/size_before)*100.0:.2f}%"  # noqa E501
@@ -147,22 +181,22 @@ def bagging(
 
 
 def representor(
-    alpha: Sequence[float], beta: Sequence[float], x: Sequence[float]
-) -> Sequence[float]:  # noqa E501
+    alpha: ArrayLike, beta: ArrayLike, x: ArrayLike
+) -> ArrayLike:  # noqa E501
     """
     Parameters
     ----------
-    alpha : Sequence[float]
+    alpha : ArrayLike
         A numpy array of alpha coefficients
-    beta : Sequence[float]
+    beta : ArrayLike
         A numpy array of beta coefficients
-    x : Sequence[float]
+    x : ArrayLike
         A numpy array of input variables
     Calculation of representation function (Kuosmanen, 2008 / Formula 4.1)
 
     Returns
     -------
-    ArrayLike[float]
+    ArrayLike
         The minimum value of g_hat for each x
     """
     alpha_r = alpha.reshape(-1, 1)
